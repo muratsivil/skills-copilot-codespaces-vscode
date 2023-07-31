@@ -1,52 +1,63 @@
-// Create web server using express
-const express = require('express')
-const router = express.Router()
-const Comment = require('../../models/comment')
-const Restaurant = require('../../models/restaurant')
+// Create web server
+const express = require('express');
+const router = express.Router();
 
-// Create a new comment
-router.post('/', (req, res) => {
-  const userId = req.user._id
-  const restaurantId = req.body.restaurantId
-  const comment = req.body.text
-  return Comment.create({ userId, restaurantId, comment })
-    .then(() => {
-      return Restaurant.findById(restaurantId)
-    })
-    .then(restaurant => {
-      restaurant.commentsCount = restaurant.commentsCount + 1
-      return restaurant.save()
-    })
-    .then(() => {
-      res.redirect(`/restaurants/${restaurantId}`)
-    })
-    .catch(error => {
-      console.log(error)
-    })
-})
+// Get comment model
+const Comment = require('../models/comment');
 
-// Delete a comment
-router.delete('/:id', (req, res) => {
-  const userId = req.user._id
-  const _id = req.params.id
-  return Comment.findById(_id)
-    .then(comment => {
-      const restaurantId = comment.restaurantId
-      return Comment.deleteOne({ _id, userId })
-        .then(() => {
-          return Restaurant.findById(restaurantId)
-        })
-        .then(restaurant => {
-          restaurant.commentsCount = restaurant.commentsCount - 1
-          return restaurant.save()
-        })
-        .then(() => {
-          res.redirect(`/restaurants/${restaurantId}`)
-        })
-    })
-    .catch(error => {
-      console.log(error)
-    })
-})
+// Get comments page
+router.get('/comments', (req, res) => {
+  Comment.find({}, (err, comments) => {
+    if (err) console.log(err);
+    res.json({ comments: comments });
+  });
+});
 
-module.exports = router
+// Post comment
+router.post('/comment', (req, res) => {
+  const comment = new Comment({
+    username: req.body.username,
+    comment: req.body.comment
+  });
+
+  comment.save((err) => {
+    if (err) console.log(err);
+    res.json({ message: 'Comment has been added!' });
+  });
+});
+
+// Get single comment
+router.get('/comment/:id', (req, res) => {
+  Comment.findById(req.params.id, (err, comment) => {
+    if (err) console.log(err);
+    res.json({ comment: comment });
+  });
+});
+
+// Update a comment
+router.put('/comment/:id', (req, res) => {
+  Comment.findByIdAndUpdate(req.params.id, {
+    $set: {
+      comment: req.body.comment
+    }
+  },
+    {
+      new: true
+    },
+    (err, comment) => {
+      if (err) console.log(err);
+      res.json({ comment: comment });
+    }
+  );
+});
+
+// Delete comment
+router.delete('/comment/:id', (req, res) => {
+  Comment.findByIdAndRemove(req.params.id, (err, comment) => {
+    if (err) console.log(err);
+    res.json({ message: 'Comment has been deleted!' });
+  });
+});
+
+// Exports
+module.exports = router;
